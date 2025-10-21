@@ -15,6 +15,7 @@ tokenizer = BPETokenizer()
 class FrEnDataset(Dataset):
     def __init__(self, fr_en_path: Path):
         self.fr_en_csv = pd.read_csv(fr_en_path)
+        self.fr_en_csv = self.fr_en_csv.dropna()
 
     def __len__(self):
         return len(self.fr_en_csv)
