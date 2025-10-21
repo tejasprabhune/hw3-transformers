@@ -64,7 +64,7 @@ def train_overfit_nmt():
         dropout=dropout,
     ).to(device)
 
-    criterion = nn.CrossEntropyLoss(ignore_index=tokenizer.eos_token_id)
+    criterion = nn.CrossEntropyLoss(ignore_index=tokenizer.pad_token_id)
     optimizer = optim.Adam(model.parameters(), lr=lr)
 
     for epoch in range(epochs):
