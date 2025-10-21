@@ -41,13 +41,13 @@ def train_overfit_nmt():
     device = 0
 
     vocab_size = len(tokenizer.vocab)
-    num_layers = 2
-    num_heads = 2
-    embedding_dim = 128
+    num_layers = 4
+    num_heads = 4
+    embedding_dim = 256
     ffn_hidden_dim = 256
-    qk_length = 16
-    value_length = 16
-    max_length = 5000
+    qk_length = 256
+    value_length = 256
+    max_length = 1500
     dropout = 0.1
     lr = 1e-3
     epochs = 10
@@ -107,4 +107,3 @@ def train_overfit_nmt():
 
 if __name__ == "__main__":
     train_overfit_nmt()
-

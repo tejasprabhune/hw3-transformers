@@ -13,6 +13,7 @@ class BPETokenizer(Tokenizer):
         """
 
         self.tokenizer: AutoTokenizer = AutoTokenizer.from_pretrained("gpt2")
+        self.tokenizer.add_special_tokens({'pad_token': '[PAD]'})
 
         self.vocab = self.tokenizer.get_vocab()
 

@@ -1,9 +1,12 @@
+from typing import Optional
+
 import math
 
 import torch
 import torch.nn as nn
 
 from .attention import MultiHeadAttention, FeedForwardNN
+from seq2seq.data.fr_en import tokenizer
 
 
 class PositionalEncoding(nn.Module):
@@ -20,7 +23,9 @@ class PositionalEncoding(nn.Module):
     """
 
     def __init__(self, d_model: int, dropout: float = 0.1, max_len: int = 10_000):
-        """Initialize the PositionalEncoding layer."""
+        """
+        Initialize the PositionalEncoding layer.
+        """
         super().__init__()
         self.dropout = nn.Dropout(p=dropout)
 
@@ -82,11 +87,11 @@ class EncoderLayer(nn.Module):
         self.layer_norm2 = nn.LayerNorm(embedding_dim)
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
         """
         The forward pass of the EncoderLayer.
         """
-        attention_output = self.multi_head_attention(x, x, x)
+        attention_output = self.multi_head_attention(x, x, x, mask)
         attention_output = self.dropout(attention_output)
         x = self.layer_norm1(x + attention_output)
         feed_forward_output = self.feed_forward_nn(x)
@@ -168,9 +173,12 @@ class Encoder(nn.Module):
         """
         The forward pass of the Encoder.
         """
+        # Create src_padding_mask
+        src_padding_mask = (x != tokenizer.pad_token_id).unsqueeze(1).unsqueeze(2)
+
         x = self.embedding(x)
         x = self.positional_encoding(x)
         x = self.dropout(x)
         for encoder_layer in self.encoder_layers:
-            x = encoder_layer(x)
+            x = encoder_layer(x, src_padding_mask)
         return x

@@ -49,10 +49,10 @@ def collate_fn(batch):
     target_seq = [item[1] for item in batch]
 
     pad_in = pad_sequence(
-        in_seq, batch_first=True, padding_value=tokenizer.eos_token_id
+        in_seq, batch_first=True, padding_value=tokenizer.pad_token_id
     )
     pad_target = pad_sequence(
-        target_seq, batch_first=True, padding_value=tokenizer.eos_token_id
+        target_seq, batch_first=True, padding_value=tokenizer.pad_token_id
     )
 
     return pad_in, pad_target
