@@ -12,8 +12,12 @@ class BPETokenizer(Tokenizer):
         Uses a pretrained BPE tokenizer to encode and decode text.
         """
 
-        self.tokenizer: AutoTokenizer = AutoTokenizer.from_pretrained("gpt2")
-        self.tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+        self.tokenizer: AutoTokenizer = AutoTokenizer.from_pretrained(
+            "bert-base-multilingual-cased"
+        )
+        self.tokenizer.add_special_tokens(
+            {"pad_token": "[PAD]", "bos_token": "[BOS]", "eos_token": "[EOS]"}
+        )
 
         self.vocab = self.tokenizer.get_vocab()
 
