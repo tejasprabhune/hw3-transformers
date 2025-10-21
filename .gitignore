@@ -6,3 +6,4 @@ en-fr.csv
 wandb
 ckpts
 *.egg-info
+*.pt

@@ -5,6 +5,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from pathlib import Path
 import torch.optim as optim
+from torch.optim.lr_scheduler import LambdaLR
 
 from seq2seq.transformer.transformer import Transformer
 from seq2seq.data.fr_en import FrEnDataset, collate_fn, tokenizer
@@ -49,8 +50,13 @@ def train_overfit_nmt():
     value_length = 64
     max_length = 1500
     dropout = 0.1
-    lr = 1e-3
     epochs = 10
+
+    warmup_steps = 4000
+    base_lr = 1e-3
+
+    def warmup_lambda(step):
+        return min((step + 1) / warmup_steps, 1.0)
 
     model = Transformer(
         pad_idx=tokenizer.pad_token_id,
@@ -67,7 +73,8 @@ def train_overfit_nmt():
     ).to(device)
 
     criterion = nn.CrossEntropyLoss(ignore_index=tokenizer.pad_token_id)
-    optimizer = optim.Adam(model.parameters(), lr=lr)
+    optimizer = optim.Adam(model.parameters(), lr=base_lr)
+    scheduler = LambdaLR(optimizer, lr_lambda=warmup_lambda)
 
     for epoch in range(epochs):
         model.train()
@@ -86,6 +93,7 @@ def train_overfit_nmt():
             loss = criterion(output.reshape(-1, vocab_size), tgt_output.reshape(-1))
             loss.backward()
             optimizer.step()
+            scheduler.step()
 
             total_loss += loss.item()
             data_tqdm.set_postfix({"loss": loss})
