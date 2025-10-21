@@ -36,23 +36,24 @@ def decode(model, src_sentence, max_len=100, device="cpu"):
 def train_overfit_nmt():
     data_path = Path("data/nmt/en-fr-small.csv")
     dataset = FrEnDataset(data_path)
-    dataloader = DataLoader(dataset, batch_size=32, shuffle=True, collate_fn=collate_fn)
+    dataloader = DataLoader(dataset, batch_size=4, shuffle=True, collate_fn=collate_fn)
 
     device = 0
 
     vocab_size = len(tokenizer.vocab)
-    num_layers = 4
-    num_heads = 4
-    embedding_dim = 256
-    ffn_hidden_dim = 256
-    qk_length = 256
-    value_length = 256
+    num_layers = 2
+    num_heads = 2
+    embedding_dim = 64
+    ffn_hidden_dim = 64
+    qk_length = 64
+    value_length = 64
     max_length = 1500
     dropout = 0.1
     lr = 1e-3
     epochs = 10
 
     model = Transformer(
+        pad_idx=tokenizer.pad_token_id,
         vocab_size=vocab_size,
         num_layers=num_layers,
         num_heads=num_heads,
@@ -62,6 +63,7 @@ def train_overfit_nmt():
         max_length=max_length,
         value_length=value_length,
         dropout=dropout,
+        device=device,
     ).to(device)
 
     criterion = nn.CrossEntropyLoss(ignore_index=tokenizer.pad_token_id)

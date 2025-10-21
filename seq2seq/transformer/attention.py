@@ -89,19 +89,19 @@ class MultiHeadAttention(nn.Module):
     ) -> torch.Tensor:
         """
         Compute the scaled dot-product attention given Q, K, and V.
+        This is where the pad_mask and causal_mask are applied.
 
         Args:
             Q: torch.Tensor of shape (B, num_heads, T, qk_length)
             K: torch.Tensor of shape (B, num_heads, T, qk_length)
             V: torch.Tensor of shape (B, num_heads, T, value_length)
-            mask: Optional torch.Tensor of shape (B, T, T) or None
+            mask: Optional boolean torch.Tensor, broadcastable to (B, num_heads, T, T).
         """
         lookup = torch.matmul(Q, K.transpose(-2, -1))
         lookup = lookup / torch.sqrt(torch.tensor(Q.size(-1)))
 
         if mask is not None:
-            # TODO: in decoder section
-            lookup = lookup.masked_fill(mask == 0, float("-inf"))
+            lookup = lookup.masked_fill(mask, float("-inf"))
 
         attention = torch.nn.functional.softmax(lookup, dim=-1)
 

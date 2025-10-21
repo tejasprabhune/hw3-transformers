@@ -8,6 +8,7 @@ from .decoder import Decoder
 class Transformer(nn.Module):
     def __init__(
         self,
+        pad_idx: int,
         vocab_size: int,
         num_layers: int,
         num_heads: int,
@@ -17,25 +18,11 @@ class Transformer(nn.Module):
         max_length: int,
         value_length: int,
         dropout: float = 0.1,
+        device: str = "cpu",
     ):
-        """
-        Here, we implement the full Transformer model.
-
-        The Transformer model will take in a source sequence
-        and a target sequence and will output a sequence of
-        logits representing the next token in the target.
-
-        The Transformer model will consist of an Encoder and a
-        Decoder. The Encoder will take in the source sequence
-        and will output an encoded representation of the source.
-
-        The Decoder will take in the target sequence and the
-        encoded representation of the source and will output
-        a sequence of logits representing the next token in
-        the target sequence.
-        """
         super().__init__()
 
+        self.pad_idx = pad_idx
         self.vocab_size = vocab_size
         self.num_layers = num_layers
         self.num_heads = num_heads
@@ -44,11 +31,8 @@ class Transformer(nn.Module):
 
         self.qk_length = qk_length
         self.value_length = value_length
+        self.device = device
 
-        # Define any layers you'll need in the forward pass
-        # Hint: This should be relatively simple, as you've
-        # already implemented the Encoder and Decoder layers.
-        # Check the `Attention Is All You Need` paper for guidance.
         self.encoder = Encoder(
             vocab_size,
             num_layers,
@@ -73,17 +57,27 @@ class Transformer(nn.Module):
             dropout,
         )
 
-    def forward(self, src: torch.Tensor, tgt: torch.Tensor) -> torch.Tensor:
-        """
-        The forward pass of the Transformer model.
+    def make_pad_mask(self, q, k):
+        # k: (B, T_k)
+        # returns: (B, 1, 1, T_k)
+        pad_mask = k.eq(self.pad_idx).unsqueeze(1).unsqueeze(1)
+        return pad_mask
 
-        Args:
-            src: torch.Tensor with shape (B, T1) representing the source tokens
-            tgt: torch.Tensor with shape (B, T2) representing the target tokens
+    def make_no_peak_mask(self, q, k):
+        # Create a look-ahead mask to prevent attending to future tokens
+        len_q, len_k = q.size(1), k.size(1)
+        mask = torch.triu(torch.ones(len_q, len_k, device=self.device, dtype=torch.bool), diagonal=1)
+        return mask
 
-        Returns:
-            torch.Tensor with shape (B, T2, C) representing the output logits
-        """
-        enc_x, src_mask = self.encoder(src)
-        dec_x = self.decoder(tgt, enc_x, src_mask)
-        return dec_x
+    def forward(self, src: torch.Tensor, trg: torch.Tensor) -> torch.Tensor:
+        src_mask = self.make_pad_mask(src, src)
+        src_trg_mask = self.make_pad_mask(trg, src)
+        
+        trg_pad_mask = self.make_pad_mask(trg, trg)
+        trg_no_peak_mask = self.make_no_peak_mask(trg, trg)
+        
+        trg_mask = trg_pad_mask | trg_no_peak_mask
+
+        enc_src = self.encoder(src, src_mask)
+        output = self.decoder(trg, enc_src, trg_mask, src_trg_mask)
+        return output

@@ -155,38 +155,16 @@ class Decoder(nn.Module):
         self.fc = nn.Linear(embedding_dim, vocab_size)
         self.dropout = nn.Dropout(dropout)
 
-    def make_mask(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        Create a look-ahead mask to prevent attention to future tokens.
-        Returns a boolean mask where True indicates positions to be masked.
-        Shape: (1, T, T)
-        """
-        B, T = x.size()
-        look_ahead_mask = torch.triu(
-            torch.ones(T, T, device=x.device, dtype=torch.bool), diagonal=1
-        )
-        return look_ahead_mask.unsqueeze(0).unsqueeze(0)
-
     def forward(
         self,
         x: torch.Tensor,
         enc_x: torch.Tensor | None = None,
+        tgt_mask: torch.Tensor | None = None,
         src_mask: torch.Tensor | None = None,
     ) -> torch.Tensor:
         """
         The forward pass of the Decoder.
         """
-        # Create target padding mask: True where there is padding
-        # Shape: (B, 1, 1, T)
-        tgt_padding_mask = (x == tokenizer.pad_token_id).unsqueeze(1).unsqueeze(2)
-
-        look_ahead_mask = self.make_mask(x)
-
-        # Combine padding mask and look-ahead mask for self-attention
-        # True in either means it should be masked (set to -inf)
-        combined_tgt_mask_bool = tgt_padding_mask | look_ahead_mask
-        tgt_mask = torch.where(combined_tgt_mask_bool, 0.0, 1.0)
-
         x = self.embedding(x)
         x = self.positional_encoding(x)
         x = self.dropout(x)

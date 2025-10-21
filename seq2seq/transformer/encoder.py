@@ -171,20 +171,13 @@ class Encoder(nn.Module):
         )
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, src_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
         """
         The forward pass of the Encoder.
         """
-        # Create source padding mask: True where there is padding
-        # Shape: (B, 1, 1, T)
-        src_padding_mask_bool = (x == tokenizer.pad_token_id).unsqueeze(1).unsqueeze(2)
-
-        # Convert boolean mask to attention mask (0 for unmasked, -inf for masked)
-        src_mask = torch.where(src_padding_mask_bool, 0.0, 1.0)
-
         x = self.embedding(x)
         x = self.positional_encoding(x)
         x = self.dropout(x)
         for encoder_layer in self.encoder_layers:
             x = encoder_layer(x, src_mask)
-        return x, src_mask
+        return x
