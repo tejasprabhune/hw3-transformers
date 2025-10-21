@@ -1,5 +1,5 @@
 [project]
-name = "hw3"
+name = "seq2seq"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -8,4 +8,9 @@ dependencies = [
     "torch",
     "numpy",
     "tqdm>=4.67.1",
+    "pandas>=2.3.3",
+    "transformers>=4.57.1",
 ]
+
+[tool.setuptools]
+packages = ["seq2seq"]

@@ -1,5 +1,6 @@
 import unittest
-from tokenizer.character_tokenizer import CharacterTokenizer
+from seq2seq.tokenizer.character_tokenizer import CharacterTokenizer
+
 
 class TestCharacterTokenizer(unittest.TestCase):
     def test_e2e(self):
@@ -19,8 +20,10 @@ class TestCharacterTokenizer(unittest.TestCase):
     def test_french_input(self):
         """Test example from French-English dataset."""
         tokenizer = CharacterTokenizer()
-        text = ("Souvent considérée comme la plus ancienne des sciences, "
-                 "elle découle de notre étonnement et de nos q...")
+        text = (
+            "Souvent considérée comme la plus ancienne des sciences, "
+            "elle découle de notre étonnement et de nos q..."
+        )
         encoded = tokenizer.encode(text)
         decoded = tokenizer.decode(encoded)
         self.assertEqual(decoded, text.lower())
@@ -28,11 +31,14 @@ class TestCharacterTokenizer(unittest.TestCase):
     def test_english_input(self):
         """Test example from English-French dataset."""
         tokenizer = CharacterTokenizer()
-        text = ("The white light spectrum Codes in the light"
-                " The electromagnetic spectrum Emission spectra Absorption...")
+        text = (
+            "The white light spectrum Codes in the light"
+            " The electromagnetic spectrum Emission spectra Absorption..."
+        )
         encoded = tokenizer.encode(text)
         decoded = tokenizer.decode(encoded)
         self.assertEqual(decoded, text.lower())
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

@@ -5,3 +5,4 @@ en-fr-full.csv
 en-fr.csv
 wandb
 ckpts
+*.egg-info
