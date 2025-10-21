@@ -157,38 +157,42 @@ class Decoder(nn.Module):
 
     def make_mask(self, x: torch.Tensor) -> torch.Tensor:
         """
-        Create a mask to prevent attention to future tokens.
+        Create a look-ahead mask to prevent attention to future tokens.
+        Returns a boolean mask where True indicates positions to be masked.
+        Shape: (1, T, T)
         """
-        B, T, C = x.size()
-        ones = torch.ones((1, T, T))
-        out = torch.tril(ones, 1)
-
-        return out
+        B, T = x.size()
+        look_ahead_mask = torch.triu(
+            torch.ones(T, T, device=x.device, dtype=torch.bool), diagonal=1
+        )
+        return look_ahead_mask.unsqueeze(0).unsqueeze(0)
 
     def forward(
-        self, x: torch.Tensor, enc_x: torch.Tensor | None = None
+        self,
+        x: torch.Tensor,
+        enc_x: torch.Tensor | None = None,
+        src_mask: torch.Tensor | None = None,
     ) -> torch.Tensor:
         """
         The forward pass of the Decoder.
         """
-        tgt_padding_mask = (x != tokenizer.pad_token_id).unsqueeze(1).unsqueeze(2)
+        # Create target padding mask: True where there is padding
+        # Shape: (B, 1, 1, T)
+        tgt_padding_mask = (x == tokenizer.pad_token_id).unsqueeze(1).unsqueeze(2)
 
-        look_ahead_mask = self.make_mask(x).to(x.device)
+        look_ahead_mask = self.make_mask(x)
 
-        tgt_mask = tgt_padding_mask & look_ahead_mask
-
-        src_padding_mask = None
-        if enc_x is not None:
-            src_padding_mask = (
-                (enc_x != tokenizer.pad_token_id).unsqueeze(1).unsqueeze(2)
-            )
+        # Combine padding mask and look-ahead mask for self-attention
+        # True in either means it should be masked (set to -inf)
+        combined_tgt_mask_bool = tgt_padding_mask | look_ahead_mask
+        tgt_mask = torch.where(combined_tgt_mask_bool, 0.0, 1.0)
 
         x = self.embedding(x)
         x = self.positional_encoding(x)
         x = self.dropout(x)
 
         for decoder_layer in self.decoder_layers:
-            x = decoder_layer(x, enc_x, tgt_mask, src_padding_mask)
+            x = decoder_layer(x, enc_x, tgt_mask, src_mask)
 
         x = self.fc(x)
         return x

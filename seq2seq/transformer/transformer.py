@@ -84,6 +84,6 @@ class Transformer(nn.Module):
         Returns:
             torch.Tensor with shape (B, T2, C) representing the output logits
         """
-        enc_x = self.encoder(src)
-        dec_x = self.decoder(tgt, enc_x)
+        enc_x, src_mask = self.encoder(src)
+        dec_x = self.decoder(tgt, enc_x, src_mask)
         return dec_x
