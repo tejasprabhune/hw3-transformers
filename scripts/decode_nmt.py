@@ -36,13 +36,13 @@ def main():
 
     # Model configuration
     vocab_size = len(tokenizer.vocab)
-    num_layers = 2
+    num_layers = 6
     num_heads = 8
-    embedding_dim = 256
-    ffn_hidden_dim = 256
-    qk_length = 256
-    value_length = 256
-    max_length = 100
+    embedding_dim = 512
+    ffn_hidden_dim = 512
+    qk_length = 512
+    value_length = 512
+    max_length = 200
     dropout = 0.1
 
     # Instantiate the model
@@ -61,10 +61,10 @@ def main():
     ).to(device)
 
     # Load the trained model weights
-    model_path = "fr_en_small_e9.pt"
+    model_path = "fr_en_euro_latest.pt"
     try:
         model.load_state_dict(
-            torch.load(model_path, map_location=device, weights_only=True)
+            torch.load(model_path, map_location=device, weights_only=True)["model"]
         )
     except FileNotFoundError:
         print(f"Error: Model file not found at '{model_path}'")
@@ -74,29 +74,24 @@ def main():
     model.eval()
 
     # Sentences to translate (from data/nmt/en-fr-small.csv)
-    test_sentences = [
-        ("Plan du site", "Site map"),
-        ("Rétroaction", "Feedback"),
-        ("Crédits", "Credits"),
-        ("Français", "English"),
-        (
-            "Pour le public, le travail n'est pas sans intérêt : on croit en effet que la position des objets célestes a un impact sur les évènements qui ont cours sur la Terre.",
-            "For the public, the work is not without interest: it is believed that the position of celestial objects has an impact on events taking place on Earth.",
-        ),
-        (
-            "ÉvolutionImages Le Britannique Thomas Harriot réalise (plusieurs mois avant Galilée) le premier croquis de la Lune à partir d'une lunette astronomique.",
-            "Evolution of images British astronomer Thomas Harriot uses a refracting telescope to make the first sketch of the Moon many months before Galileo performs the same feat.",
-        ),
-        (
-            "Instruments En Italie, Galilée publie «Le messager des étoiles» et résume les observations astronomiques révolutionnaires qu'il a effectuées avec une lunette astronomique de sa fabrication.",
-            'Instruments In Italy, Galileo publishes "The Starry Messenger" and makes revolutionary astronomical observations using a telescope he built himself.',
-        ),
+    fr_sentences = [
+        "Le Parlement européen salue les décisions prises par la Commission européenne, telles que présentées dans ce rapport, y compris celle qui exige, dans un cas précis, le remboursement des sommes allouées et applique donc l'article 88 du traité CECA.",
+        "On sait que jusqu'à présent, le Conseil a refusé d'adopter un tel règlement.",
+        "Il ne faudrait pas que le nouveau modèle expérimenté à l' heure actuelle par la Commission ait pour conséquence un pur processus de nationalisation, qui annulerait les effets obtenus par notre politique de concurrence.",
+        "Si nous voulons qu'une culture juridique existe en Europe, il va sans dire que le droit ne peut être appliqué par la seule Commission, par des organes centraux, mais qu'il doit aussi l'être par les autorités nationales, par les tribunaux nationaux.",
     ]
 
-    for fr_sentence, en_ground_truth in test_sentences:
+    en_sentences = [
+        "The European Parliament welcomes the decisions taken by the Commission, as set out in this report, including the one which, in a specific case, demands the repayment of the sums allocated and therefore applies Article 88 of the ECSC Treaty.",
+        "We know that the Council has so far refused to adopt such a regulation.",
+        "The new model currently being tested by the Commission should not result in a pure process of nationalisation which would undo the effects achieved by our competition policy.",
+        "If we want a legal culture to exist in Europe, it goes without saying that the law cannot be applied only by the Commission, by central bodies, but must also be applied by the national authorities, by the national courts.",
+    ]
+
+    for fr_sentence, en_sentence in zip(fr_sentences, en_sentences):
         translation = decode(model, fr_sentence, max_len=max_length, device=device)
         print(f"French: {fr_sentence}")
-        print(f"Ground Truth English: {en_ground_truth}")
+        print(f"Ground Truth English: {en_sentence}")
         print(f"Model Translation: {translation}")
         print("-" * 20)
 
