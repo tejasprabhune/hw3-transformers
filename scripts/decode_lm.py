@@ -6,7 +6,7 @@ from seq2seq.transformer.transformer import Decoder
 from seq2seq.data.screenplay import tokenizer
 
 
-def decode(model, start_tokens=None, max_len=200, device="cpu"):
+def decode(model, start_tokens=None, max_len=1000, device="cpu"):
     model.eval()
     if start_tokens is None:
         # Start with the beginning of sequence token if no prompt is given
@@ -20,8 +20,14 @@ def decode(model, start_tokens=None, max_len=200, device="cpu"):
             output = model(tgt_tensor)
 
         next_token_logits = output[0, -1, :]
-        # Greedy decoding
-        next_token = torch.argmax(next_token_logits, dim=-1).item()
+        # # Greedy decoding
+        # indices_to_remove = (
+        #     next_token_logits < torch.topk(next_token_logits, 20)[0][..., -1, None]
+        # )
+        # next_token_logits[indices_to_remove] = 0
+        next_token_logits = torch.softmax(next_token_logits, dim=-1)
+        next_token = torch.multinomial(next_token_logits, num_samples=1).item()
+        # next_token = torch.argmax(next_token_logits, dim=-1).item()
 
         if next_token == tokenizer.eos_token_id:
             break
@@ -32,7 +38,7 @@ def decode(model, start_tokens=None, max_len=200, device="cpu"):
 
 
 def main():
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = "mps:0"
     print(f"Using device: {device}")
 
     # Model configuration from train_lm.py
@@ -60,7 +66,7 @@ def main():
     ).to(device)
 
     # Load the trained model weights
-    model_path = "screenplay_lm_0.pt"
+    model_path = "saved_screenplay_lm.pt"
     try:
         # The training script saves a checkpoint dictionary
         checkpoint = torch.load(model_path, map_location=device)
@@ -83,10 +89,13 @@ def main():
     print("Generating text from the language model...")
 
     # Optional: Provide a starting prompt
-    start_prompt = "LELAND TURBO\n"
+    start_prompt = """YOUNG JUDY (V.O.)
+          Fear. Treachery. Bloodlust!
+          Thousands of years ago, these were
+          the forces that ruled our world."""
     start_tokens = tokenizer.encode(start_prompt).tolist()
     generated_text = decode(
-        model, start_tokens=start_tokens, max_len=200, device=device
+        model, start_tokens=start_tokens, max_len=300, device=device
     )
 
     # Generate text from scratch
