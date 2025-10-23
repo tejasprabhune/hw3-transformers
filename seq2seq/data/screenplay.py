@@ -7,7 +7,7 @@ from torch.nn.utils.rnn import pad_sequence
 from seq2seq.tokenizer.bpe_tokenizer import BPETokenizer
 
 
-tokenizer = BPETokenizer()
+tokenizer = BPETokenizer(model="gpt2")
 
 
 class ScreenplayDataset(Dataset):

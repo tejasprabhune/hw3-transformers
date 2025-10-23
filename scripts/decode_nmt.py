@@ -12,15 +12,32 @@ def decode(model, src_sentence, max_len=100, device="cpu"):
 
     tgt_tokens = [tokenizer.bos_token_id]
 
-    for _ in tqdm(range(max_len)):
+    for _ in range(max_len):
         tgt_tensor = torch.tensor([tgt_tokens]).to(device)
         with torch.no_grad():
             output = model(src_tensor.unsqueeze(0), tgt_tensor)
 
         next_token_logits = output[0, -1, :]
+
+        # top-k
+        # indices_to_remove = next_token_logits < torch.topk(next_token_logits, 20)[0][..., -1, None]
+        # next_token_logits[indices_to_remove] = -float('inf')
+
+
+        # top-p
+        sorted_logits, sorted_indices = torch.sort(next_token_logits, descending=True)
+        cumulative_probs = torch.cumsum(torch.softmax(sorted_logits, dim=-1), dim=-1)
+        sorted_indices_to_remove = cumulative_probs > 0.9
+        sorted_indices_to_remove[..., 1:] = sorted_indices_to_remove[..., :-1].clone()
+        sorted_indices_to_remove[..., 0] = 0
+        indices_to_remove = sorted_indices[sorted_indices_to_remove]
+        next_token_logits[indices_to_remove] = -float('inf')
+
         next_token_probs = torch.softmax(next_token_logits, dim=-1)
         next_token = torch.multinomial(next_token_probs, num_samples=1).item()
-        next_token = torch.argmax(next_token_probs).item()
+
+        # greedy
+        # next_token = torch.argmax(next_token_probs).item()
 
         if next_token == tokenizer.eos_token_id:
             break
@@ -31,7 +48,7 @@ def decode(model, src_sentence, max_len=100, device="cpu"):
 
 
 def main():
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = "cuda:3" if torch.cuda.is_available() else "cpu"
     print(f"Using device: {device}")
 
     # Model configuration
@@ -79,6 +96,10 @@ def main():
         "On sait que jusqu'à présent, le Conseil a refusé d'adopter un tel règlement.",
         "Il ne faudrait pas que le nouveau modèle expérimenté à l' heure actuelle par la Commission ait pour conséquence un pur processus de nationalisation, qui annulerait les effets obtenus par notre politique de concurrence.",
         "Si nous voulons qu'une culture juridique existe en Europe, il va sans dire que le droit ne peut être appliqué par la seule Commission, par des organes centraux, mais qu'il doit aussi l'être par les autorités nationales, par les tribunaux nationaux.",
+        "Il importe d'assurer la cohérence entre les objectifs de la politique agricole commune et ceux de la politique environnementale, notamment en matière de biodiversité.",
+    "La mise en œuvre des mesures transitoires doit être rigoureusement surveillée afin de garantir une concurrence loyale et non faussée sur le marché intérieur.",
+    "Toute modification du cadre financier pluriannuel requiert l'accord unanime du Conseil, après consultation et approbation du Parlement européen.",
+    "Nous devons renforcer la coopération avec les pays tiers pour relever les défis migratoires et œuvrer conjointement à la stabilité régionale.",
     ]
 
     en_sentences = [
@@ -86,6 +107,10 @@ def main():
         "We know that the Council has so far refused to adopt such a regulation.",
         "The new model currently being tested by the Commission should not result in a pure process of nationalisation which would undo the effects achieved by our competition policy.",
         "If we want a legal culture to exist in Europe, it goes without saying that the law cannot be applied only by the Commission, by central bodies, but must also be applied by the national authorities, by the national courts.",
+        "It is important to ensure coherence between the objectives of the Common Agricultural Policy and those of environmental policy, particularly concerning biodiversity.",
+    "The implementation of transitional measures must be rigorously monitored to guarantee fair and undistorted competition within the internal market.",
+    "Any modification to the multiannual financial framework requires the unanimous agreement of the Council, following consultation and approval by the European Parliament.",
+    "We must strengthen cooperation with third countries to address migratory challenges and work jointly towards regional stability.",
     ]
 
     for fr_sentence, en_sentence in zip(fr_sentences, en_sentences):

@@ -16,7 +16,7 @@ run = wandb.init(
     project="transformer",
     config={
         "learning_rate": 0.00005,
-        "architecture": "transformer-lm",
+        "architecture": "transformer-lm-gpt",
         "dataset": "screenplay",
         "epochs": 10,
     },
@@ -43,7 +43,7 @@ def decode(model, src_sentence, max_len=100, device="cpu"):
     return tokenizer.decode(torch.tensor(tgt_tokens))
 
 
-def save_checkpoint(epoch: int, model, optimizer, scheduler):
+def save_checkpoint(epoch: int, model, optimizer, scheduler, latest = True):
     checkpoint = {
         "epoch": epoch,
         "model": model.state_dict(),
@@ -51,7 +51,10 @@ def save_checkpoint(epoch: int, model, optimizer, scheduler):
         "scheduler": scheduler.state_dict(),
     }
 
-    torch.save(checkpoint, f"screenplay_lm_{epoch}.pt")
+    if latest:
+        torch.save(checkpoint, f"screenplay_lm_gpt_latest.pt")
+    else:
+        torch.save(checkpoint, f"screenplay_lm_gpt_{epoch}.pt")
 
 
 def make_pad_mask(q, k):
@@ -73,7 +76,7 @@ def make_no_peak_mask(q, k, device=0):
 def train_lm():
     data_path = Path("data/lm/")
     dataset = ScreenplayDataset(data_path)
-    dataloader = DataLoader(dataset, batch_size=1, shuffle=True, collate_fn=collate_fn)
+    dataloader = DataLoader(dataset, batch_size=8, shuffle=True, collate_fn=collate_fn)
 
     device = 0
 
@@ -86,7 +89,7 @@ def train_lm():
     value_length = 512
     max_length = 1000
     dropout = 0.1
-    epochs = 10
+    epochs = 200
 
     warmup_steps = 4000
     base_lr = 5e-5
@@ -114,6 +117,11 @@ def train_lm():
     criterion = nn.CrossEntropyLoss(ignore_index=tokenizer.pad_token_id)
     optimizer = optim.AdamW(model.parameters(), lr=base_lr, betas=[0.9, 0.98], eps=1e-9)
     scheduler = LambdaLR(optimizer, lr_lambda=lr_lambda)
+
+    # ckpt = torch.load("screenplay_lm_21.pt")
+    # model.load_state_dict(ckpt["model"])
+    # optimizer.load_state_dict(ckpt["optimizer"])
+    # scheduler.load_state_dict(ckpt["scheduler"])
 
     for epoch in range(epochs):
         model.train()
@@ -148,12 +156,15 @@ def train_lm():
             except Exception as e:
                 print(e)
 
-            if i % 1000 == 0:
+            if i % 5000 == 0:
                 print("Saving checkpoint...")
                 save_checkpoint(epoch, model, optimizer, scheduler)
 
         avg_loss = total_loss / len(dataloader)
         print(f"Epoch {epoch + 1}: Loss - {avg_loss}")
+
+        if epoch % 25 == 0:
+            save_checkpoint(epoch, model, optimizer, scheduler, latest=False)
 
 
 if __name__ == "__main__":

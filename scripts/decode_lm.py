@@ -4,6 +4,7 @@ import torch
 
 from seq2seq.transformer.transformer import Decoder
 from seq2seq.data.screenplay import tokenizer
+from seq2seq.tokenizer.bpe_tokenizer import BPETokenizer
 
 
 def decode(model, start_tokens=None, max_len=1000, device="cpu"):
@@ -14,7 +15,7 @@ def decode(model, start_tokens=None, max_len=1000, device="cpu"):
     else:
         tgt_tokens = start_tokens
 
-    for _ in tqdm(range(max_len)):
+    for _ in range(max_len):
         tgt_tensor = torch.tensor([tgt_tokens]).to(device)
         with torch.no_grad():
             output = model(tgt_tensor)
@@ -25,8 +26,20 @@ def decode(model, start_tokens=None, max_len=1000, device="cpu"):
         #     next_token_logits < torch.topk(next_token_logits, 20)[0][..., -1, None]
         # )
         # next_token_logits[indices_to_remove] = 0
-        next_token_logits = torch.softmax(next_token_logits, dim=-1)
-        next_token = torch.multinomial(next_token_logits, num_samples=1).item()
+        sorted_logits, sorted_indices = torch.sort(next_token_logits, descending=True)
+        cumulative_probs = torch.cumsum(torch.softmax(sorted_logits, dim=-1), dim=-1)
+
+        # Remove tokens with cumulative probability above the threshold
+        sorted_indices_to_remove = cumulative_probs > 0.8
+        # Shift the indices to the right to keep also the first token above the threshold
+        sorted_indices_to_remove[..., 1:] = sorted_indices_to_remove[..., :-1].clone()
+        sorted_indices_to_remove[..., 0] = 0
+
+        indices_to_remove = sorted_indices[sorted_indices_to_remove]
+        next_token_logits[indices_to_remove] = -float('inf')
+
+        next_token_probs = torch.softmax(next_token_logits, dim=-1)
+        next_token = torch.multinomial(next_token_probs, num_samples=1).item()
         # next_token = torch.argmax(next_token_logits, dim=-1).item()
 
         if next_token == tokenizer.eos_token_id:
@@ -34,11 +47,13 @@ def decode(model, start_tokens=None, max_len=1000, device="cpu"):
 
         tgt_tokens.append(next_token)
 
+        print(tokenizer.decode(torch.tensor([next_token])), sep="", end="", flush=True)
+
     return tokenizer.decode(torch.tensor(tgt_tokens))
 
 
 def main():
-    device = "mps:0"
+    device = "cuda:3"
     print(f"Using device: {device}")
 
     # Model configuration from train_lm.py
@@ -66,7 +81,7 @@ def main():
     ).to(device)
 
     # Load the trained model weights
-    model_path = "saved_screenplay_lm.pt"
+    model_path = "screenplay_lm_gpt_latest.pt"
     try:
         # The training script saves a checkpoint dictionary
         checkpoint = torch.load(model_path, map_location=device)
@@ -89,21 +104,15 @@ def main():
     print("Generating text from the language model...")
 
     # Optional: Provide a starting prompt
-    start_prompt = """YOUNG JUDY (V.O.)
-          Fear. Treachery. Bloodlust!
-          Thousands of years ago, these were
-          the forces that ruled our world."""
+    start_prompt = """-- Eve turns and looks at him."""
     start_tokens = tokenizer.encode(start_prompt).tolist()
     generated_text = decode(
-        model, start_tokens=start_tokens, max_len=300, device=device
+        model, start_tokens=start_tokens, max_len=500, device=device
     )
+    print()
 
     # Generate text from scratch
-    # generated_text = decode(model, max_len=200, device=device)
-
-    print("\n--- Generated Text ---")
-    print(generated_text)
-    print("-" * 20)
+    # generated_text = decode(model, max_len=300, device=device)
 
 
 if __name__ == "__main__":

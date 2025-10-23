@@ -5,16 +5,14 @@ from transformers import AutoTokenizer
 
 
 class BPETokenizer(Tokenizer):
-    def __init__(self, verbose: bool = False):
+    def __init__(self, model: str = "bert-base-multilingual-cased", verbose: bool = False):
         """
         Initializes the BPETokenizer class for French to English translation.
 
         Uses a pretrained BPE tokenizer to encode and decode text.
         """
 
-        self.tokenizer: AutoTokenizer = AutoTokenizer.from_pretrained(
-            "bert-base-multilingual-cased"
-        )
+        self.tokenizer: AutoTokenizer = AutoTokenizer.from_pretrained(model)
         self.tokenizer.add_special_tokens(
             {"pad_token": "[PAD]", "bos_token": "[BOS]", "eos_token": "[EOS]"}
         )
