@@ -1,3 +1,4 @@
+import wandb
 from tqdm import tqdm
 
 import torch
@@ -9,6 +10,17 @@ from torch.optim.lr_scheduler import LambdaLR
 
 from seq2seq.transformer.transformer import Decoder
 from seq2seq.data.screenplay import ScreenplayDataset, collate_fn, tokenizer
+
+run = wandb.init(
+    entity="tejasprabhune-uc-berkeley-electrical-engineering-compute",
+    project="transformer",
+    config={
+        "learning_rate": 0.00005,
+        "architecture": "transformer-lm",
+        "dataset": "screenplay",
+        "epochs": 10,
+    },
+)
 
 
 def decode(model, src_sentence, max_len=100, device="cpu"):
@@ -31,6 +43,17 @@ def decode(model, src_sentence, max_len=100, device="cpu"):
     return tokenizer.decode(torch.tensor(tgt_tokens))
 
 
+def save_checkpoint(epoch: int, model, optimizer, scheduler):
+    checkpoint = {
+        "epoch": epoch,
+        "model": model.state_dict(),
+        "optimizer": optimizer.state_dict(),
+        "scheduler": scheduler.state_dict(),
+    }
+
+    torch.save(checkpoint, f"screenplay_lm_{epoch}.pt")
+
+
 def train_lm():
     data_path = Path("data/lm/")
     dataset = ScreenplayDataset(data_path)
@@ -45,7 +68,7 @@ def train_lm():
     ffn_hidden_dim = 512
     qk_length = 512
     value_length = 512
-    max_length = 100
+    max_length = 1000
     dropout = 0.1
     epochs = 10
 
@@ -102,7 +125,6 @@ def train_lm():
                 data_tqdm.set_postfix({"loss": loss})
             except Exception as e:
                 print(e)
-                break
 
         avg_loss = total_loss / len(dataloader)
         print(f"Epoch {epoch + 1}: Loss - {avg_loss}")
