@@ -54,6 +54,22 @@ def save_checkpoint(epoch: int, model, optimizer, scheduler):
     torch.save(checkpoint, f"screenplay_lm_{epoch}.pt")
 
 
+def make_pad_mask(q, k):
+    # k: (B, T_k)
+    # returns: (B, 1, 1, T_k)
+    pad_mask = k.eq(tokenizer.pad_token_id).unsqueeze(1).unsqueeze(1)
+    return pad_mask
+
+
+def make_no_peak_mask(q, k, device=0):
+    # Create a look-ahead mask to prevent attending to future tokens
+    len_q, len_k = q.size(1), k.size(1)
+    mask = torch.triu(
+        torch.ones(len_q, len_k, device=device, dtype=torch.bool), diagonal=1
+    )
+    return mask
+
+
 def train_lm():
     data_path = Path("data/lm/")
     dataset = ScreenplayDataset(data_path)
@@ -112,7 +128,12 @@ def train_lm():
 
                 optimizer.zero_grad()
 
-                output = model(para_input)
+                trg_pad_mask = make_pad_mask(para_input, para_input)
+                trg_no_peak_mask = make_no_peak_mask(para_input, para_input)
+
+                trg_mask = trg_pad_mask | trg_no_peak_mask
+
+                output = model(para_input, tgt_mask=trg_mask)
 
                 loss = criterion(
                     output.reshape(-1, vocab_size), para_output.reshape(-1)
