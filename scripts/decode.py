@@ -1,3 +1,5 @@
+from tqdm import tqdm
+
 import torch
 
 from seq2seq.transformer.transformer import Transformer
@@ -10,7 +12,7 @@ def decode(model, src_sentence, max_len=100, device="cpu"):
 
     tgt_tokens = [tokenizer.bos_token_id]
 
-    for _ in range(max_len):
+    for _ in tqdm(range(max_len)):
         tgt_tensor = torch.tensor([tgt_tokens]).to(device)
         with torch.no_grad():
             output = model(src_tensor.unsqueeze(0), tgt_tensor)
@@ -35,12 +37,12 @@ def main():
     # Model configuration
     vocab_size = len(tokenizer.vocab)
     num_layers = 2
-    num_heads = 2
-    embedding_dim = 64
-    ffn_hidden_dim = 64
-    qk_length = 64
-    value_length = 64
-    max_length = 1500
+    num_heads = 8
+    embedding_dim = 256
+    ffn_hidden_dim = 256
+    qk_length = 256
+    value_length = 256
+    max_length = 100
     dropout = 0.1
 
     # Instantiate the model
@@ -59,7 +61,7 @@ def main():
     ).to(device)
 
     # Load the trained model weights
-    model_path = "fr_en_small_e1.pt"
+    model_path = "fr_en_small_e9.pt"
     try:
         model.load_state_dict(
             torch.load(model_path, map_location=device, weights_only=True)
@@ -80,6 +82,14 @@ def main():
         (
             "Pour le public, le travail n'est pas sans intérêt : on croit en effet que la position des objets célestes a un impact sur les évènements qui ont cours sur la Terre.",
             "For the public, the work is not without interest: it is believed that the position of celestial objects has an impact on events taking place on Earth.",
+        ),
+        (
+            "ÉvolutionImages Le Britannique Thomas Harriot réalise (plusieurs mois avant Galilée) le premier croquis de la Lune à partir d'une lunette astronomique.",
+            "Evolution of images British astronomer Thomas Harriot uses a refracting telescope to make the first sketch of the Moon many months before Galileo performs the same feat.",
+        ),
+        (
+            "Instruments En Italie, Galilée publie «Le messager des étoiles» et résume les observations astronomiques révolutionnaires qu'il a effectuées avec une lunette astronomique de sa fabrication.",
+            'Instruments In Italy, Galileo publishes "The Starry Messenger" and makes revolutionary astronomical observations using a telescope he built himself.',
         ),
     ]
 

@@ -34,29 +34,34 @@ def decode(model, src_sentence, max_len=100, device="cpu"):
     return tokenizer.decode(torch.tensor(tgt_tokens))
 
 
-def train_overfit_nmt():
-    data_path = Path("data/nmt/en-fr-small.csv")
+def train_nmt():
+    data_path = Path("data/nmt/europarl/")
     dataset = FrEnDataset(data_path)
     dataloader = DataLoader(dataset, batch_size=4, shuffle=True, collate_fn=collate_fn)
 
     device = 0
 
     vocab_size = len(tokenizer.vocab)
-    num_layers = 2
-    num_heads = 2
-    embedding_dim = 64
-    ffn_hidden_dim = 64
-    qk_length = 64
-    value_length = 64
-    max_length = 1500
+    num_layers = 6
+    num_heads = 8
+    embedding_dim = 512
+    ffn_hidden_dim = 2048
+    qk_length = 512
+    value_length = 512
+    max_length = 100
     dropout = 0.1
     epochs = 10
 
     warmup_steps = 4000
     base_lr = 1e-3
 
-    def warmup_lambda(step):
-        return min((step + 1) / warmup_steps, 1.0)
+    def lr_lambda(step):
+        if step == 0:
+            step = 1  # avoid div by zero
+        if step < warmup_steps:
+            return step / warmup_steps
+        else:
+            return (warmup_steps**0.5) / (step**0.5)
 
     model = Transformer(
         pad_idx=tokenizer.pad_token_id,
@@ -73,8 +78,8 @@ def train_overfit_nmt():
     ).to(device)
 
     criterion = nn.CrossEntropyLoss(ignore_index=tokenizer.pad_token_id)
-    optimizer = optim.Adam(model.parameters(), lr=base_lr)
-    scheduler = LambdaLR(optimizer, lr_lambda=warmup_lambda)
+    optimizer = optim.AdamW(model.parameters(), lr=base_lr, betas=[0.9, 0.98], eps=1e-9)
+    scheduler = LambdaLR(optimizer, lr_lambda=lr_lambda)
 
     for epoch in range(epochs):
         model.train()
@@ -116,4 +121,4 @@ def train_overfit_nmt():
 
 
 if __name__ == "__main__":
-    train_overfit_nmt()
+    train_nmt()
