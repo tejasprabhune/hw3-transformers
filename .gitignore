@@ -7,4 +7,4 @@ wandb
 ckpts
 *.egg-info
 *.pt
-data/
+europarl/

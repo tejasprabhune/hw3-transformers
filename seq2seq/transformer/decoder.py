@@ -63,7 +63,7 @@ class DecoderLayer(nn.Module):
         x: torch.Tensor,
         enc_x: torch.Tensor | None,
         tgt_mask: torch.Tensor,
-        src_mask: Optional[torch.Tensor] = None,
+        src_mask: torch.Tensor | None = None,
     ) -> torch.Tensor:
         """
         The forward pass of the DecoderLayer.

@@ -31,7 +31,9 @@ class BPETokenizer(Tokenizer):
 
     def encode(self, text: str) -> torch.Tensor:
         return torch.tensor(
-            self.tokenizer.encode(text, truncation=True, max_length=1024, add_special_tokens=False)
+            self.tokenizer.encode(
+                text, truncation=True, max_length=1024, add_special_tokens=False
+            )
         )
 
     def decode(self, tokens: torch.Tensor) -> str:

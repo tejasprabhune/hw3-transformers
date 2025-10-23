@@ -45,15 +45,16 @@ def decode(model, src_sentence, max_len=100, device="cpu"):
 
     return tokenizer.decode(torch.tensor(tgt_tokens))
 
+
 def save_checkpoint(epoch: int, model, optimizer, scheduler):
     checkpoint = {
-            "epoch": epoch,
-            "model": model.state_dict(),
-            "optimizer": optimizer.state_dict(),
-            "scheduler": scheduler.state_dict()
+        "epoch": epoch,
+        "model": model.state_dict(),
+        "optimizer": optimizer.state_dict(),
+        "scheduler": scheduler.state_dict(),
     }
 
-    torch.save(model.state_dict(), f"fr_en_euro_{epoch}.pt")
+    torch.save(checkpoint, f"fr_en_euro_{epoch}.pt")
 
 
 def train_nmt():
@@ -133,7 +134,7 @@ def train_nmt():
             if i % 1000 == 0:
                 print("Saving checkpoint...")
                 save_checkpoint(epoch, model, optimizer, scheduler)
-            
+
         avg_loss = total_loss / len(dataloader)
         print(f"Epoch {epoch + 1}: Loss - {avg_loss}")
 
