@@ -7,7 +7,7 @@ from torch.nn.utils.rnn import pad_sequence
 from seq2seq.tokenizer.bpe_tokenizer import BPETokenizer
 
 
-tokenizer = BPETokenizer()
+tokenizer = BPETokenizer(model="gpt2")
 
 
 class ScreenplayDataset(Dataset):
@@ -49,5 +49,4 @@ class ScreenplayDataset(Dataset):
 
 def collate_fn(batch):
     pad_in = pad_sequence(batch, batch_first=True, padding_value=tokenizer.pad_token_id)
-    pad_in = pad_in.to(torch.int32)
     return pad_in
