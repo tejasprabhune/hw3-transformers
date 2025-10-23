@@ -49,5 +49,4 @@ class ScreenplayDataset(Dataset):
 
 def collate_fn(batch):
     pad_in = pad_sequence(batch, batch_first=True, padding_value=tokenizer.pad_token_id)
-    pad_in = pad_in.to(torch.int32)
     return pad_in

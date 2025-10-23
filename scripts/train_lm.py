@@ -103,7 +103,7 @@ def train_lm():
         model.train()
         total_loss = 0
         data_tqdm = tqdm(dataloader)
-        for paragraph in data_tqdm:
+        for i, paragraph in enumerate(data_tqdm):
             try:
                 paragraph = paragraph.to(device)
 
@@ -123,8 +123,13 @@ def train_lm():
 
                 total_loss += loss.item()
                 data_tqdm.set_postfix({"loss": loss})
+                run.log({"loss": loss})
             except Exception as e:
                 print(e)
+
+            if i % 1000 == 0:
+                print("Saving checkpoint...")
+                save_checkpoint(epoch, model, optimizer, scheduler)
 
         avg_loss = total_loss / len(dataloader)
         print(f"Epoch {epoch + 1}: Loss - {avg_loss}")
