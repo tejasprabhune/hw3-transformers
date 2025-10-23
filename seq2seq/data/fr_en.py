@@ -24,12 +24,9 @@ class FrEnDataset(Dataset):
     def __getitem__(self, idx: int):
         fr = self.fr_lines[idx]
         en = self.en_lines[idx]
-        print(fr, en)
 
         fr_tok = tokenizer.encode(fr)
         en_tok = tokenizer.encode(en)
-
-        print(len(fr_tok), len(en_tok))
 
         return torch.cat(
             [

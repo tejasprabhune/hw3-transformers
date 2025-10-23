@@ -1,4 +1,5 @@
 from tqdm import tqdm
+import wandb
 
 import torch
 import torch.nn as nn
@@ -10,6 +11,17 @@ from torch.optim.lr_scheduler import LambdaLR
 from seq2seq.transformer.transformer import Transformer
 from seq2seq.data.fr_en import FrEnDataset, collate_fn, tokenizer
 
+run = wandb.init(
+    entity="tejasprabhune-uc-berkeley-electrical-engineering-compute",
+    project="transformer",
+    config={
+        "learning_rate": 0.00005,
+        "architecture": "transformer",
+        "dataset": "fr-en-euro",
+        "epochs": 10,
+    },
+)
+
 
 def decode(model, src_sentence, max_len=100, device="cpu"):
     model.eval()
@@ -17,7 +29,7 @@ def decode(model, src_sentence, max_len=100, device="cpu"):
 
     tgt_tokens = [tokenizer.bos_token_id]
 
-    for _ in range(max_len):
+    for _ in tqdm(range(max_len)):
         tgt_tensor = torch.tensor([tgt_tokens]).to(device)
         with torch.no_grad():
             output = model(src_tensor.unsqueeze(0), tgt_tensor)
@@ -33,27 +45,37 @@ def decode(model, src_sentence, max_len=100, device="cpu"):
 
     return tokenizer.decode(torch.tensor(tgt_tokens))
 
+def save_checkpoint(epoch: int, model, optimizer, scheduler):
+    checkpoint = {
+            "epoch": epoch,
+            "model": model.state_dict(),
+            "optimizer": optimizer.state_dict(),
+            "scheduler": scheduler.state_dict()
+    }
+
+    torch.save(model.state_dict(), f"fr_en_euro_{epoch}.pt")
+
 
 def train_nmt():
     data_path = Path("data/nmt/europarl/")
     dataset = FrEnDataset(data_path)
     dataloader = DataLoader(dataset, batch_size=4, shuffle=True, collate_fn=collate_fn)
 
-    device = 0
+    device = 1
 
     vocab_size = len(tokenizer.vocab)
     num_layers = 6
     num_heads = 8
     embedding_dim = 512
-    ffn_hidden_dim = 2048
+    ffn_hidden_dim = 512
     qk_length = 512
     value_length = 512
-    max_length = 100
+    max_length = 200
     dropout = 0.1
-    epochs = 10
+    epochs = 40
 
     warmup_steps = 4000
-    base_lr = 1e-3
+    base_lr = 5e-5
 
     def lr_lambda(step):
         if step == 0:
@@ -85,24 +107,33 @@ def train_nmt():
         model.train()
         total_loss = 0
         data_tqdm = tqdm(dataloader)
-        for src, tgt in data_tqdm:
-            src, tgt = src.to(device), tgt.to(device)
+        for i, (src, tgt) in enumerate(data_tqdm):
+            try:
+                src, tgt = src.to(device), tgt.to(device)
 
-            tgt_input = tgt[:, :-1]
-            tgt_output = tgt[:, 1:]
+                tgt_input = tgt[:, :-1]
+                tgt_output = tgt[:, 1:]
 
-            optimizer.zero_grad()
+                optimizer.zero_grad()
 
-            output = model(src, tgt_input)
+                output = model(src, tgt_input)
 
-            loss = criterion(output.reshape(-1, vocab_size), tgt_output.reshape(-1))
-            loss.backward()
-            optimizer.step()
-            scheduler.step()
+                loss = criterion(output.reshape(-1, vocab_size), tgt_output.reshape(-1))
+                loss.backward()
+                optimizer.step()
+                scheduler.step()
 
-            total_loss += loss.item()
-            data_tqdm.set_postfix({"loss": loss})
+                total_loss += loss.item()
+                data_tqdm.set_postfix({"loss": loss})
+                run.log({"loss": loss})
+            except Exception as e:
+                print(e)
+                continue
 
+            if i % 1000 == 0:
+                print("Saving checkpoint...")
+                save_checkpoint(epoch, model, optimizer, scheduler)
+            
         avg_loss = total_loss / len(dataloader)
         print(f"Epoch {epoch + 1}: Loss - {avg_loss}")
 
