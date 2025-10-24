@@ -76,7 +76,7 @@ def make_no_peak_mask(q, k, device=0):
 def train_lm():
     data_path = Path("data/lm/")
     dataset = ScreenplayDataset(data_path)
-    dataloader = DataLoader(dataset, batch_size=8, shuffle=True, collate_fn=collate_fn)
+    dataloader = DataLoader(dataset, batch_size=4, shuffle=True, collate_fn=collate_fn)
 
     device = 0
 
@@ -87,9 +87,9 @@ def train_lm():
     ffn_hidden_dim = 512
     qk_length = 512
     value_length = 512
-    max_length = 1000
+    max_length = 5000
     dropout = 0.1
-    epochs = 200
+    epochs = 500
 
     warmup_steps = 4000
     base_lr = 5e-5
